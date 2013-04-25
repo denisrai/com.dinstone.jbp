@@ -24,13 +24,13 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class Bootstrap {
+public class Launcher {
 
-    private static final Logger LOG = Logger.getLogger(Bootstrap.class.getName());
+    private static final Logger LOG = Logger.getLogger(Launcher.class.getName());
 
     protected static final String APPLICATION_HOME_TOKEN = "${application.home}";
 
-    private static Bootstrap bootstrap;
+    private static Launcher launcher;
 
     private Configuration config;
 
@@ -38,7 +38,7 @@ public class Bootstrap {
 
     private LifecycleManager lifecycle;
 
-    public Bootstrap() {
+    public Launcher() {
         try {
             init();
         } catch (Exception e) {
@@ -58,9 +58,9 @@ public class Bootstrap {
     }
 
     public static void main(String[] args) {
-        if (bootstrap == null) {
+        if (launcher == null) {
             try {
-                bootstrap = new Bootstrap();
+                launcher = new Launcher();
             } catch (Exception e) {
                 e.printStackTrace();
                 return;
@@ -74,9 +74,9 @@ public class Bootstrap {
             }
 
             if (command.equals("start")) {
-                bootstrap.start();
+                launcher.start();
             } else if (command.equals("stop")) {
-                bootstrap.stop();
+                launcher.stop();
             } else {
                 LOG.log(Level.WARNING, "Bootstrap: command \"" + command + "\" does not exist.");
             }

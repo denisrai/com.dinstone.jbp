@@ -7,4 +7,4 @@ rem set JAVA_GC=-XX:+DisableExplicitGC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapD
 set LOGGING_CONFIG=-Djava.util.logging.config.file=config/logging.properties
 set CLASSPATH=bin/bootstrap.jar
 
-java %JAVA_OPTS% %JPDA_OPTS% %LOGGING_CONFIG% -classpath %CLASSPATH% com.dinstone.launcher.Bootstrap start
+java %JAVA_OPTS% %JPDA_OPTS% %LOGGING_CONFIG% -classpath %CLASSPATH% com.dinstone.launcher.Launcher start

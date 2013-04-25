@@ -38,7 +38,7 @@ public class BootstrapTest {
     public void testMain02() throws Exception {
         // -Dlauncher.config=file:src/test/resources/config/launcher.properties
         System.setProperty("launcher.config", "file:src/test/resources/config/launcher.properties");
-        Bootstrap bs = new Bootstrap();
+        Launcher bs = new Launcher();
         bs.start();
     }
 
@@ -46,7 +46,7 @@ public class BootstrapTest {
     public void testMain03() throws Exception {
         // -Dapplication.home=src/test/resources/
         System.setProperty("application.home", "src/test/resources/");
-        Bootstrap bs = new Bootstrap();
+        Launcher bs = new Launcher();
         bs.start();
     }
 
