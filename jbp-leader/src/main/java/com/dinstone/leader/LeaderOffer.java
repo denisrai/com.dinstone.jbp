@@ -1,5 +1,5 @@
 
-package com.dinstone.jbp.leader;
+package com.dinstone.leader;
 
 import java.util.Comparator;
 
@@ -58,7 +58,7 @@ public class LeaderOffer {
      */
     @Override
     public String toString() {
-        return "LeaderOffer [code=" + code + ", offer=" + offer + ", candidate=" + candidate + "]";
+        return "{code=" + code + ", offer=" + offer + ", candidate=" + candidate + "}";
     }
 
     public static class LeaderOfferComparator implements Comparator<LeaderOffer> {

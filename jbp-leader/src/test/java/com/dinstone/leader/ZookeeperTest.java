@@ -1,5 +1,5 @@
 
-package com.dinstone.jbp.leader;
+package com.dinstone.leader;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
@@ -51,21 +51,21 @@ public class ZookeeperTest {
                 //
                 // };
                 //
-                String hostport = "172.17.22.141:2181";
+                String hostport = "172.17.20.210:2181";
                 // zooKeeper = new ZooKeeper(hostport, 30000, defWatcher);
 
-                LeaderElectionService le = new LeaderElectionService(hostport, "C-" + index);
+                LeaderElectionService le = new LeaderElectionService(hostport, 3000, "C-" + index);
                 le.setLeaderElectionAware(new LeaderElectionAware() {
 
-                    public void produceLeader(LeaderOffer leaderOffer) {
+                    public void onLeader(LeaderOffer leaderOffer) {
                         System.out.println("I'm leader " + leaderOffer);
                     }
 
-                    public void produceFollower(LeaderOffer leaderOffer) {
+                    public void onFollower(LeaderOffer leaderOffer) {
                         System.out.println("I'm follower " + leaderOffer);
                     }
 
-                    public void electionClosed(LeaderOffer leaderOffer) {
+                    public void onClosed(LeaderOffer leaderOffer) {
                         System.out.println("electionClosed " + leaderOffer);
                     }
 

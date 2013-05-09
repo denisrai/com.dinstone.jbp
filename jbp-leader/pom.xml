@@ -7,12 +7,12 @@
 	<modelVersion>4.0.0</modelVersion>
   <groupId>com.dinstone.jbp</groupId>
   <artifactId>jbp-leader</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.0</version>
   <dependencies>
   	<dependency>
   		<groupId>org.apache.hadoop</groupId>
   		<artifactId>zookeeper</artifactId>
-  		<version>3.3.1</version>
+  		<version>3.4.5</version>
   		<type>jar</type>
   		<scope>compile</scope>
   		<exclusions>
