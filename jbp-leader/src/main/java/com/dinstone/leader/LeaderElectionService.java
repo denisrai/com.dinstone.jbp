@@ -104,60 +104,38 @@ public class LeaderElectionService {
         this.leaderElectionAware = leaderElectionAware;
     }
 
-    private class ElectionRunner implements Runnable {
-
-        /**
-         * {@inheritDoc}
-         * 
-         * @see java.lang.Runnable#run()
-         */
-        public void run() {
-            clear();
-
-            try {
-                connection();
-
-                regist();
-
-                determine();
-            } catch (KeeperException e) {
-                failed(e);
-            } catch (InterruptedException e) {
-                failed(e);
-            }
-        }
-
-    }
-
     /**
      *
      */
     private void elect() {
-        Thread thread = new Thread(new ElectionRunner(), "LeaderElection-T" + (index++));
+        Runnable target = new Runnable() {
+
+            public void run() {
+                doElect();
+            }
+        };
+
+        Thread thread = new Thread(target, "LeaderElection-T" + (index++));
         thread.setDaemon(true);
         thread.start();
     }
 
-    private void connection() throws InterruptedException, KeeperException {
-        if (this.zooKeeper == null || !zooKeeper.getState().isAlive()) {
-            final CountDownLatch connectSingal = new CountDownLatch(1);
-            try {
-                this.zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, new Watcher() {
+    /**
+    *
+    */
+    private synchronized void doElect() {
+        clear();
 
-                    public void process(WatchedEvent event) {
-                        LOG.debug("Received zookeeper event, type={}, state={}", event.getType(), event.getState());
-                        if (KeeperState.SyncConnected == event.getState()) {
-                            connectSingal.countDown();
-                        } else if (KeeperState.Expired == event.getState()) {
-                            LOG.debug("Session is expired, need to redo the election process");
-                            elect();
-                        }
-                    }
-                });
-            } catch (IOException e) {
-                throw KeeperException.create(Code.CONNECTIONLOSS);
-            }
-            connectSingal.await();
+        try {
+            connection();
+
+            regist();
+
+            determine();
+        } catch (KeeperException e) {
+            failed(e);
+        } catch (InterruptedException e) {
+            failed(e);
         }
     }
 
@@ -186,6 +164,29 @@ public class LeaderElectionService {
             } finally {
                 zooKeeper = null;
             }
+        }
+    }
+
+    private void connection() throws InterruptedException, KeeperException {
+        if (this.zooKeeper == null || !zooKeeper.getState().isAlive()) {
+            final CountDownLatch connectSingal = new CountDownLatch(1);
+            try {
+                this.zooKeeper = new ZooKeeper(quorumServers, sessionTimeout, new Watcher() {
+
+                    public void process(WatchedEvent event) {
+                        LOG.debug("Received zookeeper event, type={}, state={}", event.getType(), event.getState());
+                        if (KeeperState.SyncConnected == event.getState()) {
+                            connectSingal.countDown();
+                        } else if (KeeperState.Expired == event.getState()) {
+                            LOG.debug("Session is expired, need to redo the election process");
+                            elect();
+                        }
+                    }
+                });
+            } catch (IOException e) {
+                throw KeeperException.create(Code.CONNECTIONLOSS);
+            }
+            connectSingal.await();
         }
     }
 
