@@ -10,4 +10,6 @@ LOGGING_CONFIG="-Djava.util.logging.config.file=config/logging.properties"
 
 CLASSPATH="bin/bootstrap.jar"
 
-nohup java $JAVA_OPTS $JPDA_OPTS $LOGGING_CONFIG -classpath $CLASSPATH com.dinstone.launcher.Launcher start > /dev/null  2>&1 &
+LAUNCHER_OUT="logs/launcher.out"
+
+nohup java $JAVA_OPTS $JPDA_OPTS $LOGGING_CONFIG -classpath $CLASSPATH com.dinstone.launcher.Launcher start > $LAUNCHER_OUT 2>&1 &

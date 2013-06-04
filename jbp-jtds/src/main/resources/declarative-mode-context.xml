@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+     http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+
+	<import resource="datasource-context.xml" />
+
+	<bean id="tradeService" class="com.dinstone.jtds.declarative.impl.TradeOrderServiceImpl">
+		<property name="userService" ref="userService" />
+	</bean>
+
+	<bean id="userService" class="com.dinstone.jtds.declarative.impl.UserInfoServiceImpl">
+		<property name="simpleJdbcTemplate" ref="simpleJdbcTemplate" />
+	</bean>
+
+	<tx:advice id="dataSourceTxAdvice" transaction-manager="dataSourceTransactionManager">
+		<tx:attributes>
+			<tx:method name="*" propagation="REQUIRED" />
+			<tx:method name="get*" read-only="true" />
+		</tx:attributes>
+	</tx:advice>
+	<aop:config>
+		<aop:advisor pointcut="execution(* com.dinstone.jtds.declarative.*Service.*(..))" advice-ref="dataSourceTxAdvice" />
+	</aop:config>
+
+</beans>
