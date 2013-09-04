@@ -28,9 +28,20 @@ public class DefaultActivator {
 
     public void start() {
         showSystemEnvironment();
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void stop() {
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void showSystemEnvironment() {

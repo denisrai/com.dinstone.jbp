@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -32,16 +31,27 @@ public class LifecycleManager {
 
     private static final Logger LOG = Logger.getLogger(LifecycleManager.class.getName());
 
+    /**  */
+    private static final String INVALID = "INVALID";
+
+    /**  */
+    private static final String STOPPED = "STOPPED";
+
+    /**  */
+    private static final String CMDM = "SHUTDOWN";
+
     /**
      * The shutdown command string we are looking for.
      */
-    private String shutdown = "SHUTDOWN";
+    private String shutdown = CMDM;
 
     private int port = 5555;
 
     private boolean await = true;
 
     private Object activator;
+
+    private ServerSocket serverSocket;
 
     public LifecycleManager(Object activator, Configuration config) {
         this.activator = activator;
@@ -56,16 +66,69 @@ public class LifecycleManager {
         if (shutdown != null && shutdown.length() > 0) {
             this.shutdown = shutdown;
         }
+
+        String enabled = config.getProperty("lifecycle.enabled");
+        this.await = Boolean.parseBoolean(enabled);
+    }
+
+    public void start() {
+        init();
+
+        startActivator();
+
+        await();
+    }
+
+    public void stop() {
+        try {
+            InetAddress hostAddress = InetAddress.getByName("localhost");
+            Socket socket = new Socket(hostAddress, port);
+            // send close request
+            OutputStream out = socket.getOutputStream();
+            for (int i = 0; i < shutdown.length(); i++) {
+                out.write(shutdown.charAt(i));
+            }
+            out.flush();
+
+            LOG.log(Level.INFO, "Activator is stopping");
+
+            // receive close response
+            InputStream in = socket.getInputStream();
+            StringBuilder reply = new StringBuilder();
+            int res = -1;
+            while ((res = in.read()) != -1) {
+                reply.append((char) res);
+            }
+
+            socket.close();
+
+            // response
+            if (reply.toString().equals(STOPPED)) {
+                LOG.log(Level.INFO, "Activator is stopped");
+            } else {
+                LOG.log(Level.INFO, "Activator stop failure: " + reply);
+            }
+        } catch (Exception e) {
+            LOG.log(Level.SEVERE, "Activator stop error: ", e);
+        }
+    }
+
+    private void init() {
+        if (await) {
+            // Set up a server socket to wait on
+            try {
+                InetAddress hostAddress = InetAddress.getByName("localhost");
+                serverSocket = new ServerSocket(port, 1, hostAddress);
+            } catch (IOException e) {
+                LOG.log(Level.SEVERE, "Can't create listener on " + port, e);
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private void await() {
-        // Set up a server socket to wait on
-        ServerSocket serverSocket = null;
-        try {
-            serverSocket = new ServerSocket(port, 1, InetAddress.getByName("localhost"));
-        } catch (IOException e) {
-            LOG.log(Level.SEVERE, "LifecycleManager.await: create[" + port + "]: ", e);
-            System.exit(1);
+        if (serverSocket == null) {
+            return;
         }
 
         // Loop waiting for a connection and a valid command
@@ -76,15 +139,16 @@ public class LifecycleManager {
             try {
                 socket = serverSocket.accept();
                 socket.setSoTimeout(2000); // two seconds
+                stream = socket.getInputStream();
+
                 InetAddress radd = socket.getInetAddress();
                 LOG.log(Level.INFO, "Have an closing request at " + radd);
-                stream = socket.getInputStream();
             } catch (AccessControlException ace) {
-                LOG.log(Level.WARNING, "LifecycleManager.accept security exception: " + ace.getMessage(), ace);
+                LOG.log(Level.WARNING, "security exception", ace);
                 continue;
             } catch (IOException e) {
-                LOG.log(Level.SEVERE, "LifecycleManager.await: accept: ", e);
-                System.exit(1);
+                LOG.log(Level.SEVERE, "accept socket failure", e);
+                throw new RuntimeException(e);
             }
 
             // Read a set of characters from the socket
@@ -95,7 +159,6 @@ public class LifecycleManager {
                 try {
                     ch = stream.read();
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, "LifecycleManager.await: read: ", e);
                     ch = -1;
                 }
                 if (ch < 32) {// Control character or EOF terminates loop
@@ -105,17 +168,14 @@ public class LifecycleManager {
                 expected--;
             }
 
-            // Close the socket now that we are done with it
-            try {
-                socket.close();
-            } catch (IOException e) {
-            }
-
             // Match against our command string
             if (command.toString().equals(shutdown)) {
+                stopActivator();
+                response(socket, STOPPED);
                 break;
             } else {
-                LOG.log(Level.WARNING, "LifecycleManager.await: Invalid command '" + command.toString() + "' received");
+                LOG.log(Level.INFO, "Invalid command '" + command.toString() + "' received");
+                response(socket, INVALID);
             }
         }
 
@@ -128,43 +188,7 @@ public class LifecycleManager {
 
     }
 
-    private void anotify() {
-        int retry = 3;
-        int index = 1;
-        while (index <= retry) {
-            try {
-                String hostAddress = InetAddress.getByName("localhost").getHostAddress();
-                Socket socket = new Socket(hostAddress, port);
-                OutputStream stream = socket.getOutputStream();
-                for (int i = 0; i < shutdown.length(); i++) {
-                    stream.write(shutdown.charAt(i));
-                }
-                stream.flush();
-                stream.close();
-                socket.close();
-                break;
-            } catch (ConnectException e) {
-                if (index == retry) {
-                    LOG.log(Level.SEVERE, "LifecycleManager.stop: ", e);
-                    break;
-                }
-
-                LOG.log(Level.INFO, "LifecycleManager.stop retry {0}", index);
-                try {
-                    Thread.sleep(retry * 1000);
-                } catch (InterruptedException e1) {
-                }
-            } catch (Exception e) {
-                LOG.log(Level.SEVERE, "LifecycleManager.stop: ", e);
-                break;
-            }
-
-            index++;
-        }
-
-    }
-
-    public void start() {
+    private void startActivator() {
         try {
             long startTime = System.currentTimeMillis();
 
@@ -172,41 +196,38 @@ public class LifecycleManager {
             method.invoke(activator, (Object[]) null);
 
             long total = System.currentTimeMillis() - startTime;
-            LOG.log(Level.INFO, "Activator startup in {0} ms", total / 1000000);
+            LOG.log(Level.INFO, "Activator startup in {0} ms", total);
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Activator start error", e);
-        }
-
-        if (await) {
-            await();
-            clear();
+            LOG.log(Level.SEVERE, "Activator startup failure", e);
+            throw new RuntimeException(e);
         }
     }
 
-    public void stop() {
-        anotify();
-        clear();
-    }
-
-    private void clear() {
+    private void stopActivator() {
         try {
+            long startTime = System.currentTimeMillis();
+
             Method method = activator.getClass().getMethod("stop", (Class[]) null);
             method.invoke(activator, (Object[]) null);
 
-            LOG.log(Level.INFO, "Activator is stopped");
+            long total = System.currentTimeMillis() - startTime;
+            LOG.log(Level.INFO, "Activator shutdown in {0} ms", total);
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Activator start error", e);
+            LOG.log(Level.SEVERE, "Activator stop error", e);
         }
     }
 
-    /**
-     * the await to set
-     * 
-     * @param await
-     * @see LifecycleManager#await
-     */
-    public void setAwait(boolean await) {
-        this.await = await;
-    }
+    private void response(Socket socket, String message) {
+        // Close the socket now that we are done with it
+        try {
+            OutputStream out = socket.getOutputStream();
+            for (int i = 0; i < message.length(); i++) {
+                out.write(message.charAt(i));
+            }
+            out.flush();
 
+            socket.close();
+        } catch (IOException e) {
+        }
+    }
 }

@@ -47,9 +47,6 @@ public class Launcher {
     }
 
     public void start() throws Exception {
-        String d = config.getProperty("lifecycle.enabled");
-        lifecycle.setAwait(Boolean.parseBoolean(d));
-
         lifecycle.start();
     }
 
@@ -222,9 +219,9 @@ public class Launcher {
         }
 
         URL[] urls = classPaths.toArray(new URL[classPaths.size()]);
-        if (LOG.isLoggable(Level.INFO)) {
+        if (LOG.isLoggable(Level.CONFIG)) {
             for (int i = 0; i < urls.length; i++) {
-                LOG.log(Level.INFO, "location " + i + " is " + urls[i]);
+                LOG.log(Level.CONFIG, "location " + i + " is " + urls[i]);
             }
         }
 
